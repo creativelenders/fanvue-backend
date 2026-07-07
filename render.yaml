@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: fanvue-backend
+    env: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: fanvue-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: CORS_ORIGIN
+        value: https://your-frontend-url.vercel.app # TODO: Update this to your Vercel URL!
+
+databases:
+  - name: fanvue-db
+    databaseName: fanvuedb
+    user: fanvueuser
+    plan: free
