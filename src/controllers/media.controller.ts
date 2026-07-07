@@ -11,7 +11,7 @@ const pump = util.promisify(pipeline);
 
 export class MediaController {
   async list(request: FastifyRequest, reply: FastifyReply) {
-    const workspaceId = request.user.workspaceId;
+    const workspaceId = (request as any).workspaceId;
     
     const media = await db.query.mediaItems.findMany({
       where: eq(mediaItems.workspaceId, workspaceId),
@@ -22,8 +22,8 @@ export class MediaController {
   }
 
   async upload(request: FastifyRequest, reply: FastifyReply) {
-    const workspaceId = request.user.workspaceId;
-    const userId = request.user.id;
+    const workspaceId = (request as any).workspaceId;
+    const userId = request.user!.sub;
 
     const data = await request.file();
     if (!data) {

@@ -6,7 +6,7 @@ import { aiService } from "../services/ai.service";
 
 export class ChatController {
   async getThreads(request: FastifyRequest, reply: FastifyReply) {
-    const workspaceId = request.user.workspaceId;
+    const workspaceId = (request as any).workspaceId;
     
     // Auto-create a demo thread if none exist so the UI isn't empty
     let threads = await db.select({
@@ -23,7 +23,7 @@ export class ChatController {
     if (threads.length === 0) {
       // Seed a fan and a session
       const [newFan] = await db.insert(fans).values({ workspaceId, name: "Demo Fan", platform: "onlyfans" }).returning();
-      const [newSession] = await db.insert(aiChatSessions).values({ workspaceId, userId: request.user.id, fanId: newFan.id }).returning();
+      const [newSession] = await db.insert(aiChatSessions).values({ workspaceId, userId: request.user!.sub, fanId: newFan.id }).returning();
       await db.insert(aiChatMessages).values({ sessionId: newSession.id, role: "user", content: "Hey, are you online?" });
       
       threads = [{ id: newSession.id, fanId: newFan.id, fanName: newFan.name, updatedAt: newSession.updatedAt }];
@@ -45,8 +45,8 @@ export class ChatController {
     return reply.status(200).send({ success: true, data: formattedThreads });
   }
 
-  async getMessages(request: FastifyRequest<{ Params: { threadId: string } }>, reply: FastifyReply) {
-    const { threadId } = request.params;
+  async getMessages(request: FastifyRequest, reply: FastifyReply) {
+    const { threadId } = request.params as any;
     const messages = await db.select()
       .from(aiChatMessages)
       .where(eq(aiChatMessages.sessionId, threadId))
@@ -55,9 +55,9 @@ export class ChatController {
     return reply.status(200).send({ success: true, data: messages });
   }
 
-  async sendMessage(request: FastifyRequest<{ Params: { threadId: string }; Body: { content: string } }>, reply: FastifyReply) {
-    const { threadId } = request.params;
-    const { content } = request.body;
+  async sendMessage(request: FastifyRequest, reply: FastifyReply) {
+    const { threadId } = request.params as any;
+    const { content } = request.body as any;
 
     // 1. Save user's message (as 'assistant' since we are the creator replying to the fan)
     const [newMessage] = await db.insert(aiChatMessages).values({
@@ -74,8 +74,8 @@ export class ChatController {
     return reply.status(200).send({ success: true, data: newMessage });
   }
 
-  async draftReply(request: FastifyRequest<{ Params: { threadId: string } }>, reply: FastifyReply) {
-    const { threadId } = request.params;
+  async draftReply(request: FastifyRequest, reply: FastifyReply) {
+    const { threadId } = request.params as any;
     
     // Fetch recent messages
     const messages = await db.select()

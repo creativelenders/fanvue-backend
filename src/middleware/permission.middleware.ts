@@ -13,11 +13,11 @@ export function permissionMiddleware(resource: string, action: string) {
     return;
 
     // Admin has full access
-    if (userRole === "admin") return;
+    if (request.user!.role === "admin") return;
 
     const perm = await db.query.rolePermissions.findFirst({
       where: and(
-        eq(rolePermissions.role, userRole),
+        eq(rolePermissions.role, request.user!.role),
         eq(rolePermissions.resource, resource),
         eq(rolePermissions.action, action),
         eq(rolePermissions.isAllowed, true)

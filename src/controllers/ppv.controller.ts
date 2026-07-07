@@ -31,7 +31,7 @@ export class PpvController {
     
     const [campaign] = await db.insert(ppvCampaigns).values({
       workspaceId,
-      userId: request.user.id,
+      userId: request.user!.sub,
       title: `PPV Campaign ${Math.floor(Math.random() * 1000)}`,
       description: "Exclusive unlock",
       price: "15.00",

@@ -5,7 +5,7 @@ import { eq, desc } from "drizzle-orm";
 
 export class PromptsController {
   async list(request: FastifyRequest, reply: FastifyReply) {
-    const workspaceId = request.user.workspaceId;
+    const workspaceId = (request as any).workspaceId;
     const prompts = await db.select()
       .from(promptLibrary)
       .where(eq(promptLibrary.workspaceId, workspaceId))
@@ -14,10 +14,10 @@ export class PromptsController {
     return reply.status(200).send({ success: true, data: prompts });
   }
 
-  async create(request: FastifyRequest<{ Body: { name: string; content: string; category?: string } }>, reply: FastifyReply) {
-    const workspaceId = request.user.workspaceId;
-    const userId = request.user.id;
-    const { name, content, category } = request.body;
+  async create(request: FastifyRequest, reply: FastifyReply) {
+    const workspaceId = (request as any).workspaceId;
+    const userId = request.user!.sub;
+    const { name, content, category } = request.body as any;
 
     const [newPrompt] = await db.insert(promptLibrary).values({
       workspaceId,
@@ -30,10 +30,10 @@ export class PromptsController {
     return reply.status(201).send({ success: true, data: newPrompt });
   }
 
-  async update(request: FastifyRequest<{ Params: { id: string }; Body: { name?: string; content?: string } }>, reply: FastifyReply) {
-    const workspaceId = request.user.workspaceId;
-    const { id } = request.params;
-    const { name, content } = request.body;
+  async update(request: FastifyRequest, reply: FastifyReply) {
+    const workspaceId = (request as any).workspaceId;
+    const { id } = request.params as any;
+    const { name, content } = request.body as any;
 
     const [updatedPrompt] = await db.update(promptLibrary)
       .set({
@@ -47,8 +47,8 @@ export class PromptsController {
     return reply.status(200).send({ success: true, data: updatedPrompt });
   }
 
-  async delete(request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) {
-    const { id } = request.params;
+  async delete(request: FastifyRequest, reply: FastifyReply) {
+    const { id } = request.params as any;
     await db.delete(promptLibrary).where(eq(promptLibrary.id, id));
     return reply.status(200).send({ success: true, message: "Deleted successfully" });
   }

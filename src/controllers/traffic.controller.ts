@@ -12,7 +12,7 @@ export class TrafficController {
       name: `New Tracking Link ${Math.floor(Math.random() * 1000)}`,
       platform: platforms[Math.floor(Math.random() * platforms.length)],
       trackingCode: `link_${Math.random().toString(36).substring(7)}`,
-      campaign: "Growth Campaign",
+      utmCampaign: "Growth Campaign",
     }).returning();
     return reply.status(201).send({ success: true, data: newItem });
   }

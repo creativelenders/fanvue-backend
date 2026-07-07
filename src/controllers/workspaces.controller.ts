@@ -1,5 +1,8 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { WorkspaceService } from "../services/workspace.service";
+import { db } from "../db/client";
+import { workspaces } from "../db/schema";
+import { eq } from "drizzle-orm";
 
 export class WorkspaceController {
   private service = new WorkspaceService();
@@ -32,10 +35,6 @@ export class WorkspaceController {
 
   async delete(req: FastifyRequest, reply: FastifyReply) {
     const { workspaceId } = req.params as { workspaceId: string };
-    // Import db and workspaces here, or do it at the top
-    const { db } = await import("../db/client");
-    const { workspaces } = await import("../db/schema");
-    const { eq } = await import("drizzle-orm");
     
     await db.delete(workspaces).where(eq(workspaces.id, workspaceId));
     return reply.status(200).send({ success: true, data: null });

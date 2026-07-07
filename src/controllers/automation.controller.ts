@@ -1,7 +1,7 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { db } from "../db/client";
-import { conversationFlows } from "../db/schema";
-import { eq } from "drizzle-orm";
+import { conversationFlows, autopilotConfig, autoMessageCampaigns, messageGuardRules, socialFunnels, onboardingFunnels, ppvCampaigns, bumpRules, keywordTriggers } from "../db/schema";
+import { and, eq } from "drizzle-orm";
 
 export class AutomationController {
   async getAutopilot(req: FastifyRequest, reply: FastifyReply) {
@@ -9,11 +9,11 @@ export class AutomationController {
     console.log("GET AUTOPILOT FOR WORKSPACE:", workspaceId);
     
     let config = await db.query.autopilotConfig.findFirst({
-      where: eq(require("../db/schema").autopilotConfig.workspaceId, workspaceId)
+      where: eq(autopilotConfig.workspaceId, workspaceId)
     });
 
     if (!config) {
-      const [newConfig] = await db.insert(require("../db/schema").autopilotConfig).values({
+      const [newConfig] = await db.insert(autopilotConfig).values({
         workspaceId,
         isEnabled: false,
         mode: "assist",
@@ -31,9 +31,9 @@ export class AutomationController {
     const { workspaceId } = req.params as { workspaceId: string };
     const updates = req.body as any;
 
-    const [updated] = await db.update(require("../db/schema").autopilotConfig)
+    const [updated] = await db.update(autopilotConfig)
       .set({ ...updates, updatedAt: new Date() })
-      .where(eq(require("../db/schema").autopilotConfig.workspaceId, workspaceId))
+      .where(eq(autopilotConfig.workspaceId, workspaceId))
       .returning();
 
     return reply.send({ success: true, data: updated });
@@ -43,7 +43,7 @@ export class AutomationController {
 
   async createAutoMessage(req: FastifyRequest, reply: FastifyReply) {
     const { workspaceId } = req.params as { workspaceId: string };
-    const [newItem] = await db.insert(require("../db/schema").autoMessageCampaigns).values({
+    const [newItem] = await db.insert(autoMessageCampaigns).values({
       workspaceId,
       name: `Campaign ${Math.floor(Math.random() * 1000)}`,
       trigger: "welcome",
@@ -55,17 +55,16 @@ export class AutomationController {
   async listAutoMessages(req: FastifyRequest, reply: FastifyReply) {
     const { workspaceId } = req.params as { workspaceId: string };
     const items = await db.query.autoMessageCampaigns.findMany({
-      where: eq(require("../db/schema").autoMessageCampaigns.workspaceId, workspaceId)
+      where: eq(autoMessageCampaigns.workspaceId, workspaceId)
     });
     return reply.send({ success: true, data: items });
   }
 
   async createFlow(req: FastifyRequest, reply: FastifyReply) {
     const { workspaceId } = req.params as { workspaceId: string };
-    const [newItem] = await db.insert(require("../db/schema").conversationFlows).values({
+    const [newItem] = await db.insert(conversationFlows).values({
       workspaceId,
       name: `Flow ${Math.floor(Math.random() * 1000)}`,
-      description: "Automated upsell flow",
     }).returning();
     return reply.send({ success: true, data: newItem });
   }
@@ -73,7 +72,7 @@ export class AutomationController {
   async listFlows(req: FastifyRequest, reply: FastifyReply) {
     const { workspaceId } = req.params as { workspaceId: string };
     const flows = await db.query.conversationFlows.findMany({
-      where: eq(require("../db/schema").conversationFlows.workspaceId, workspaceId)
+      where: eq(conversationFlows.workspaceId, workspaceId)
     });
     return reply.status(200).send({ success: true, data: flows });
   }
@@ -81,8 +80,8 @@ export class AutomationController {
     const { workspaceId, id } = req.params as { workspaceId: string, id: string };
     const flow = await db.query.conversationFlows.findFirst({
       where: require("drizzle-orm").and(
-        eq(require("../db/schema").conversationFlows.workspaceId, workspaceId),
-        eq(require("../db/schema").conversationFlows.id, id)
+        eq(conversationFlows.workspaceId, workspaceId),
+        eq(conversationFlows.id, id)
       )
     });
     if (!flow) return reply.status(404).send({ success: false, error: "Flow not found" });
@@ -93,11 +92,11 @@ export class AutomationController {
     const { workspaceId, id } = req.params as { workspaceId: string, id: string };
     const updates = req.body as any;
 
-    const [updated] = await db.update(require("../db/schema").conversationFlows)
+    const [updated] = await db.update(conversationFlows)
       .set({ ...updates, updatedAt: new Date() })
       .where(require("drizzle-orm").and(
-        eq(require("../db/schema").conversationFlows.workspaceId, workspaceId),
-        eq(require("../db/schema").conversationFlows.id, id)
+        eq(conversationFlows.workspaceId, workspaceId),
+        eq(conversationFlows.id, id)
       ))
       .returning();
 
@@ -106,7 +105,7 @@ export class AutomationController {
 
   async createTrigger(req: FastifyRequest, reply: FastifyReply) {
     const { workspaceId } = req.params as { workspaceId: string };
-    const [newItem] = await db.insert(require("../db/schema").keywordTriggers).values({
+    const [newItem] = await db.insert(keywordTriggers).values({
       workspaceId,
       name: `Trigger ${Math.floor(Math.random() * 1000)}`,
       keywords: ["hello", "hi"],
@@ -118,7 +117,7 @@ export class AutomationController {
   async listTriggers(req: FastifyRequest, reply: FastifyReply) {
     const { workspaceId } = req.params as { workspaceId: string };
     const items = await db.query.keywordTriggers.findMany({
-      where: eq(require("../db/schema").keywordTriggers.workspaceId, workspaceId)
+      where: eq(keywordTriggers.workspaceId, workspaceId)
     });
     return reply.send({ success: true, data: items });
   }
@@ -128,7 +127,7 @@ export class AutomationController {
   async listGuardWords(req: FastifyRequest, reply: FastifyReply) {
     const { workspaceId } = req.params as { workspaceId: string };
     const items = await db.query.messageGuardRules.findMany({
-      where: eq(require("../db/schema").messageGuardRules.workspaceId, workspaceId)
+      where: eq(messageGuardRules.workspaceId, workspaceId)
     });
     return reply.send({ success: true, data: items });
   }
@@ -136,7 +135,7 @@ export class AutomationController {
   async addGuardWord(req: FastifyRequest, reply: FastifyReply) {
     const { workspaceId } = req.params as { workspaceId: string };
     const { word, action } = req.body as any || {};
-    const [newItem] = await db.insert(require("../db/schema").messageGuardRules).values({
+    const [newItem] = await db.insert(messageGuardRules).values({
       workspaceId,
       word: word || `banned_${Math.floor(Math.random() * 1000)}`,
       action: action || "block",
@@ -148,7 +147,7 @@ export class AutomationController {
 
   async createBumpRule(req: FastifyRequest, reply: FastifyReply) {
     const { workspaceId } = req.params as { workspaceId: string };
-    const [newItem] = await db.insert(require("../db/schema").bumpRules).values({
+    const [newItem] = await db.insert(bumpRules).values({
       workspaceId,
       name: `Bump ${Math.floor(Math.random() * 1000)}`,
       inactiveDays: 7,
@@ -160,7 +159,7 @@ export class AutomationController {
   async listBumpRules(req: FastifyRequest, reply: FastifyReply) {
     const { workspaceId } = req.params as { workspaceId: string };
     const items = await db.query.bumpRules.findMany({
-      where: eq(require("../db/schema").bumpRules.workspaceId, workspaceId)
+      where: eq(bumpRules.workspaceId, workspaceId)
     });
     return reply.send({ success: true, data: items });
   }
@@ -170,12 +169,11 @@ export class AutomationController {
     // We store broadcasts in ppvCampaigns with mediaType="broadcast" as per Drizzle schema if needed
     // Actually, Broadcasts are a separate table or just ppvCampaigns? Let's check schema.
     // The schema does not have "broadcast_campaigns". Let's insert into ppvCampaigns for broadcasts!
-    const [newItem] = await db.insert(require("../db/schema").ppvCampaigns).values({
+    const [newItem] = await db.insert(ppvCampaigns).values({
       workspaceId,
-      userId: req.user.id,
+      userId: req.user!.sub,
       title: `Broadcast ${Math.floor(Math.random() * 1000)}`,
       price: "0",
-      description: "Broadcast message",
       mediaType: "broadcast",
     }).returning();
     return reply.send({ success: true, data: newItem });
@@ -185,8 +183,8 @@ export class AutomationController {
     const { workspaceId } = req.params as { workspaceId: string };
     const items = await db.query.ppvCampaigns.findMany({
       where: require("drizzle-orm").and(
-        eq(require("../db/schema").ppvCampaigns.workspaceId, workspaceId),
-        eq(require("../db/schema").ppvCampaigns.mediaType, "broadcast")
+        eq(ppvCampaigns.workspaceId, workspaceId),
+        eq(ppvCampaigns.mediaType, "broadcast")
       )
     });
     // Format to match what the frontend expects
@@ -205,7 +203,7 @@ export class AutomationController {
   async createSocialFunnel(req: FastifyRequest, reply: FastifyReply) {
     const { workspaceId } = req.params as { workspaceId: string };
     const platforms = ["twitter", "instagram", "tiktok", "reddit"];
-    const [newItem] = await db.insert(require("../db/schema").socialFunnels).values({
+    const [newItem] = await db.insert(socialFunnels).values({
       workspaceId,
       name: `New Social Funnel ${Math.floor(Math.random() * 1000)}`,
       platform: platforms[Math.floor(Math.random() * platforms.length)],
@@ -218,17 +216,16 @@ export class AutomationController {
   async listSocialFunnels(req: FastifyRequest, reply: FastifyReply) {
     const { workspaceId } = req.params as { workspaceId: string };
     const items = await db.query.socialFunnels.findMany({
-      where: eq(require("../db/schema").socialFunnels.workspaceId, workspaceId)
+      where: eq(socialFunnels.workspaceId, workspaceId)
     });
     return reply.send({ success: true, data: items });
   }
 
   async createOnboardingFunnel(req: FastifyRequest, reply: FastifyReply) {
     const { workspaceId } = req.params as { workspaceId: string };
-    const [newItem] = await db.insert(require("../db/schema").onboardingFunnels).values({
+    const [newItem] = await db.insert(onboardingFunnels).values({
       workspaceId,
       name: `New Welcome Flow ${Math.floor(Math.random() * 1000)}`,
-      description: "Automated onboarding for new subscribers",
     }).returning();
     return reply.send({ success: true, data: newItem });
   }
@@ -236,7 +233,7 @@ export class AutomationController {
   async listOnboardingFunnels(req: FastifyRequest, reply: FastifyReply) {
     const { workspaceId } = req.params as { workspaceId: string };
     const items = await db.query.onboardingFunnels.findMany({
-      where: eq(require("../db/schema").onboardingFunnels.workspaceId, workspaceId)
+      where: eq(onboardingFunnels.workspaceId, workspaceId)
     });
     return reply.send({ success: true, data: items });
   }
@@ -245,8 +242,8 @@ export class AutomationController {
     const { workspaceId, id } = req.params as { workspaceId: string, id: string };
     const funnel = await db.query.onboardingFunnels.findFirst({
       where: require("drizzle-orm").and(
-        eq(require("../db/schema").onboardingFunnels.workspaceId, workspaceId),
-        eq(require("../db/schema").onboardingFunnels.id, id)
+        eq(onboardingFunnels.workspaceId, workspaceId),
+        eq(onboardingFunnels.id, id)
       )
     });
     if (!funnel) return reply.status(404).send({ success: false, error: "Funnel not found" });
@@ -257,11 +254,11 @@ export class AutomationController {
     const { workspaceId, id } = req.params as { workspaceId: string, id: string };
     const updates = req.body as any;
 
-    const [updated] = await db.update(require("../db/schema").onboardingFunnels)
+    const [updated] = await db.update(onboardingFunnels)
       .set({ ...updates, updatedAt: new Date() })
       .where(require("drizzle-orm").and(
-        eq(require("../db/schema").onboardingFunnels.workspaceId, workspaceId),
-        eq(require("../db/schema").onboardingFunnels.id, id)
+        eq(onboardingFunnels.workspaceId, workspaceId),
+        eq(onboardingFunnels.id, id)
       ))
       .returning();
 

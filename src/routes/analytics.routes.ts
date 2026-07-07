@@ -9,7 +9,7 @@ export async function analyticsRoutes(app: FastifyInstance) {
     "/analytics/dashboard",
     { preHandler: [authMiddleware] },
     async (request, reply) => {
-      const workspaceId = request.user.workspaceId;
+      const workspaceId = (request as any).workspaceId;
       const { timeRange } = request.query as { timeRange?: string };
       
       let startDate = new Date();

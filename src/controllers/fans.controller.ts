@@ -59,7 +59,7 @@ export class FansController {
     }
 
     const orderByParams = [];
-    const sortCol = fans[sort as keyof typeof fans] || fans.score;
+    const sortCol = (fans as any)[sort] || fans.score;
     if (order === "asc") {
       orderByParams.push(require("drizzle-orm").asc(sortCol));
     } else {
@@ -115,14 +115,14 @@ export class FansController {
   async createList(req: FastifyRequest, reply: FastifyReply) {
     const { workspaceId } = req.params as { workspaceId: string };
     const { name, isDynamic, description } = req.body as any;
-    const [newList] = await db.insert(require("../db/schema").fanLists).values({
+    const result = await db.insert(require("../db/schema").fanLists).values({
       workspaceId,
       name,
       description: description || "Custom fan list",
       isDynamic: isDynamic || false,
       rules: {}
     }).returning();
-    return reply.send({ success: true, data: newList });
+    return reply.send({ success: true, data: (result as any)[0] });
   }
 
   async listLists(req: FastifyRequest, reply: FastifyReply) {

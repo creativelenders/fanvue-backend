@@ -6,7 +6,7 @@ import { aiService } from "../services/ai.service";
 
 export class ContentController {
   async listGenerations(request: FastifyRequest, reply: FastifyReply) {
-    const workspaceId = request.user.workspaceId;
+    const workspaceId = (request as any).workspaceId;
     const generations = await db.select()
       .from(contentGenerations)
       .where(eq(contentGenerations.workspaceId, workspaceId))
@@ -16,10 +16,10 @@ export class ContentController {
     return reply.status(200).send({ success: true, data: generations });
   }
 
-  async generate(request: FastifyRequest<{ Body: { prompt: string; type?: string } }>, reply: FastifyReply) {
-    const workspaceId = request.user.workspaceId;
-    const userId = request.user.id;
-    const { prompt, type } = request.body;
+  async generate(request: FastifyRequest, reply: FastifyReply) {
+    const workspaceId = (request as any).workspaceId;
+    const userId = request.user!.sub;
+    const { prompt, type } = request.body as any;
 
     // Use DeepSeek for content generation
     const generatedContent = await aiService.generatePromotionalContent(prompt, type);
@@ -51,10 +51,10 @@ export class ContentController {
     return reply.status(200).send({ success: true, data: generation });
   }
 
-  async trainPersona(request: FastifyRequest<{ Body: { description: string } }>, reply: FastifyReply) {
-    const workspaceId = request.user.workspaceId;
-    const userId = request.user.id;
-    const { description } = request.body;
+  async trainPersona(request: FastifyRequest, reply: FastifyReply) {
+    const workspaceId = (request as any).workspaceId;
+    const userId = request.user!.sub;
+    const { description } = request.body as any;
 
     const [strategy] = await db.insert(contentStrategies).values({
       workspaceId,
@@ -68,7 +68,7 @@ export class ContentController {
   }
 
   async listPersonas(request: FastifyRequest, reply: FastifyReply) {
-    const workspaceId = request.user.workspaceId;
+    const workspaceId = (request as any).workspaceId;
     const personas = await db.select()
       .from(contentStrategies)
       .where(eq(contentStrategies.workspaceId, workspaceId))
