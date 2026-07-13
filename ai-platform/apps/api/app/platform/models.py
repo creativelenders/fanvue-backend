@@ -21,7 +21,7 @@ class OperatorUser(Base):
     __tablename__ = "operator_users"
 
     id: Mapped[str] = mapped_column(String(80), primary_key=True)
-    workspace_id: Mapped[str] = mapped_column(Uuid(as_uuid=False), ForeignKey("workspaces.id"), index=True)
+    workspace_id: Mapped[str] = mapped_column(Uuid(as_uuid=False), ForeignKey("workspaces.id", ondelete="CASCADE"), index=True)
     email: Mapped[str] = mapped_column(String(240), index=True)
     role: Mapped[str] = mapped_column(String(40), default="operator")
     active: Mapped[bool] = mapped_column(Boolean, default=True)
@@ -45,7 +45,7 @@ class Campaign(Base):
     __tablename__ = "campaigns"
 
     id: Mapped[str] = mapped_column(String(80), primary_key=True)
-    workspace_id: Mapped[str] = mapped_column(Uuid(as_uuid=False), ForeignKey("workspaces.id"), index=True)
+    workspace_id: Mapped[str] = mapped_column(Uuid(as_uuid=False), ForeignKey("workspaces.id", ondelete="CASCADE"), index=True)
     name: Mapped[str] = mapped_column(String(180))
     status: Mapped[str] = mapped_column(String(40), default="draft")
     objective: Mapped[str] = mapped_column(String(120), default="conversion")
@@ -60,7 +60,7 @@ class MediaGenerationJob(Base):
     __tablename__ = "media_generation_jobs"
 
     id: Mapped[str] = mapped_column(String(80), primary_key=True)
-    workspace_id: Mapped[str] = mapped_column(Uuid(as_uuid=False), ForeignKey("workspaces.id"), index=True)
+    workspace_id: Mapped[str] = mapped_column(Uuid(as_uuid=False), ForeignKey("workspaces.id", ondelete="CASCADE"), index=True)
     campaign_id: Mapped[str | None] = mapped_column(String(80), nullable=True, index=True)
     prompt: Mapped[str] = mapped_column(Text)
     seed: Mapped[int] = mapped_column(Integer)
@@ -77,7 +77,7 @@ class ApprovalItem(Base):
     __tablename__ = "approval_items"
 
     id: Mapped[str] = mapped_column(String(80), primary_key=True)
-    workspace_id: Mapped[str] = mapped_column(Uuid(as_uuid=False), ForeignKey("workspaces.id"), index=True)
+    workspace_id: Mapped[str] = mapped_column(Uuid(as_uuid=False), ForeignKey("workspaces.id", ondelete="CASCADE"), index=True)
     kind: Mapped[str] = mapped_column(String(60))
     status: Mapped[str] = mapped_column(String(40), default="pending")
     title: Mapped[str] = mapped_column(String(200))
@@ -131,7 +131,7 @@ class WebhookEndpoint(Base):
     __tablename__ = "webhook_endpoints"
 
     id: Mapped[str] = mapped_column(String(80), primary_key=True)
-    workspace_id: Mapped[str] = mapped_column(Uuid(as_uuid=False), ForeignKey("workspaces.id"), index=True)
+    workspace_id: Mapped[str] = mapped_column(Uuid(as_uuid=False), ForeignKey("workspaces.id", ondelete="CASCADE"), index=True)
     name: Mapped[str] = mapped_column(String(180))
     status: Mapped[str] = mapped_column(String(40), default="active")
     description: Mapped[str] = mapped_column(String(255), default="")
@@ -142,7 +142,7 @@ class AutonomousOp(Base):
     __tablename__ = "autonomous_ops"
 
     id: Mapped[str] = mapped_column(String(80), primary_key=True)
-    workspace_id: Mapped[str] = mapped_column(Uuid(as_uuid=False), ForeignKey("workspaces.id"), index=True)
+    workspace_id: Mapped[str] = mapped_column(Uuid(as_uuid=False), ForeignKey("workspaces.id", ondelete="CASCADE"), index=True)
     name: Mapped[str] = mapped_column(String(180))
     status: Mapped[str] = mapped_column(String(40), default="running")
     description: Mapped[str] = mapped_column(String(255), default="")
