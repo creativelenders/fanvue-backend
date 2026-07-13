@@ -22,6 +22,7 @@ import { trafficRoutes } from "./routes/traffic.routes";
 import { billingRoutes } from "./routes/billing.routes";
 import { analyticsRoutes } from "./routes/analytics.routes";
 import { healthRoutes } from "./routes/health.routes";
+import { aiRoutes } from "./routes/ai.routes";
 
 export async function buildApp() {
   const app = Fastify({
@@ -79,6 +80,7 @@ export async function buildApp() {
   await app.register(trafficRoutes, { prefix: "/api/v1" });
   await app.register(billingRoutes, { prefix: "/api/v1" });
   await app.register(analyticsRoutes, { prefix: "/api/v1" });
+  await app.register(aiRoutes, { prefix: "/api/v1" });
 
   return app;
 }

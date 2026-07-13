@@ -1,0 +1,2 @@
+"""Generative media pipeline domain."""
+

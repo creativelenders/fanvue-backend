@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Fanvue Platform Production Monorepo</title>
+  <style>
+    :root{--bg:#0d0c0a;--card:#211d17;--line:rgba(255,236,203,.14);--text:#f6ead7;--muted:#b9ad9c;--hot:#ffb84d;--mint:#6ef7c7;--rose:#ff5f8f}
+    *{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 10% 8%,rgba(255,184,77,.18),transparent 28rem),linear-gradient(135deg,#100f0d,#17130f 55%,#090909);color:var(--text);font-family:Georgia,"Times New Roman",serif}.shell{width:min(1280px,calc(100% - 32px));margin:auto;padding:34px 0 60px}.eyebrow{color:var(--hot);font:800 12px ui-monospace,monospace;letter-spacing:.18em;text-transform:uppercase}h1{font-size:clamp(44px,8vw,104px);line-height:.88;letter-spacing:-.08em;margin:10px 0 20px;max-width:980px}p,li{color:var(--muted);font:15px/1.6 ui-sans-serif,system-ui,sans-serif}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:22px}.card{border:1px solid var(--line);background:rgba(33,29,23,.86);border-radius:28px;padding:22px;min-height:210px;box-shadow:0 28px 90px rgba(0,0,0,.34)}h2{font-size:28px;margin:0 0 12px;letter-spacing:-.04em}.tag{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:7px 10px;color:var(--mint);font:12px ui-monospace,monospace;margin-bottom:14px}code{display:block;white-space:pre-wrap;background:rgba(0,0,0,.26);border:1px solid var(--line);border-radius:18px;padding:16px;color:#eadfcb;font:12px/1.55 ui-monospace,monospace}.wide{grid-column:span 2}@media(max-width:900px){.grid{grid-template-columns:1fr}.wide{grid-column:auto}}
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <div class="eyebrow">Master buildout package</div>
+    <h1>FanVue platform developer handoff.</h1>
+    <p>API, web app shell, shared contracts, workers, migrations, Docker deployment files, viral growth systems, crypto/trading stubs, MCP tooling, ZK proof wrapper, and setup docs are organized for developer handoff.</p>
+    <section class="grid">
+      <article class="card"><span class="tag">apps/api</span><h2>FastAPI backend</h2><p>CRM webhooks, platform routes, agent loops, skill registry, media pipeline, guardrails, and audit-ready service layer.</p></article>
+      <article class="card"><span class="tag">apps/web</span><h2>Next.js frontend</h2><p>Creator operations cockpit with campaign, media, CRM, approval, and autonomous ops sections wired to API contracts.</p></article>
+      <article class="card"><span class="tag">workers</span><h2>Background jobs</h2><p>CRM, media, scheduler, crypto treasury, and B2B lead-generation workers for autonomous routines.</p></article>
+      <article class="card"><span class="tag">infra</span><h2>Deployable infrastructure</h2><p>Dockerfiles, compose stack, PostgreSQL migration SQL, Redis service, and process boundaries.</p></article>
+      <article class="card"><span class="tag">packages</span><h2>Shared packages</h2><p>Extracted search package, shared TypeScript API contracts, and UI theme primitives.</p></article>
+      <article class="card"><span class="tag">growth</span><h2>Viral mechanics</h2><p>Generative referral media, PoD royalty tracking, perpetual referral migration, and MAB curator bounty exporter.</p></article>
+      <article class="card wide"><span class="tag">Validation</span><h2>Current test result</h2><code>cd apps/api
+python3 -m compileall app tests ../../workers
+python3 -m pytest tests -q
+
+Result: 70 passed, 1 skipped
+Known non-blocking warnings: datetime.utcnow and Pydantic dict deprecations.</code></article>
+      <article class="card"><span class="tag">Next step</span><h2>Connect data apps</h2><p>Set DATABASE_URL, run infra/migrations/001_initial_platform.sql, seed a workspace/operator, then point the web app to the API.</p></article>
+    </section>
+  </main>
+</body>
+</html>

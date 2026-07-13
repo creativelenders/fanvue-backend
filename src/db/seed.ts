@@ -6,7 +6,10 @@ import { users, workspaces, workspaceMembers, subscriptionPlans } from "./schema
 import bcrypt from "bcrypt";
 import { eq } from "drizzle-orm";
 
-const pool = new Pool({ connectionString: "postgresql://postgres:postgres@localhost:5432/fanvue" });
+import "dotenv/config";
+
+const connectionString = process.env.DATABASE_URL || "postgresql://postgres:postgres@localhost:5432/fanvue";
+const pool = new Pool({ connectionString });
 const db = drizzle(pool, { schema: { ...schema, ...relations } });
 
 async function seed() {

@@ -1,0 +1,59 @@
+services:
+
+
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+
+  api:
+    build:
+      context: .
+      dockerfile: infra/docker/api.Dockerfile
+    env_file: .env
+    ports:
+      - "8000:8000"
+    depends_on:
+      - redis
+    volumes:
+      - ./apps/api:/app
+
+  crm_worker:
+    build:
+      context: .
+      dockerfile: infra/docker/worker.Dockerfile
+    env_file: .env
+    command: ["python", "workers/crm_worker/main.py"]
+    depends_on:
+      - api
+    volumes:
+      - ./apps/api:/repo/apps/api
+      - ./workers:/repo/workers
+
+  media_worker:
+    build:
+      context: .
+      dockerfile: infra/docker/worker.Dockerfile
+    env_file: .env
+    command: ["python", "workers/media_worker/main.py"]
+    depends_on:
+      - api
+    volumes:
+      - ./apps/api:/repo/apps/api
+      - ./workers:/repo/workers
+
+  campaign_worker:
+    build:
+      context: .
+      dockerfile: infra/docker/worker.Dockerfile
+    env_file: .env
+    command: ["python", "workers/campaign_worker/main.py"]
+    depends_on:
+      - api
+    volumes:
+      - ./apps/api:/repo/apps/api
+      - ./workers:/repo/workers
+
+volumes:
+  pgdata:
+
