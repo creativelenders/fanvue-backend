@@ -32,11 +32,12 @@ export async function aiRoutes(app: FastifyInstance) {
     ];
     const path = req.url.replace("/api/v1/ai", "");
     const userId = req.user?.sub || "demo_operator";
-    let workspaceId = req.user?.workspaceId || (req as any).workspaceId;
+    let workspaceId = (req.user as any)?.workspaceId || (req as any).workspaceId;
 
     if (workspaceId && workspaceId !== "demo_workspace") {
       const exists = await db.query.workspaces.findFirst({
-        where: (ws, { eq }) => eq(ws.id, workspaceId),
+        // @ts-ignore: Drizzle ORM resolution mode mismatch in NodeNext
+        where: (ws, { eq }) => eq(ws.id, workspaceId as string),
       });
       if (!exists) {
         workspaceId = null;
