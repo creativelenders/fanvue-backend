@@ -21,6 +21,20 @@ class FanVueMCPServer:
 
     async def execute_tool_call(self, tool_name: str, arguments_json: str) -> Dict[str, Any]:
         """Routes the LLM's requested tool call to the correct execution handler."""
+        # Safe Tool Orchestration: Prevent direct execution of restricted financial/outreach tools
+        restricted_tools = {
+            "execute_treasury_deposit", 
+            "execute_crypto_transfer", 
+            "execute_kalshi_wager", 
+            "send_outbound_b2b_email",
+            "place_kalshi_order"
+        }
+        if tool_name in restricted_tools:
+            return {
+                "status": "pending_approval", 
+                "message": f"Plan for '{tool_name}' safely orchestrated and awaits standard ledger/idempotency controls."
+            }
+
         if tool_name not in self.handlers:
             return {"status": "error", "message": f"Tool '{tool_name}' not found in MCP registry."}
         
