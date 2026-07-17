@@ -8,39 +8,36 @@ logger = logging.getLogger(__name__)
 class OrnithClient:
     """
     Client for Ornith-1.0 local OpenAI-compatible vLLM MCP planner.
-    Implements robust API Key rotation and a multi-model fallback chain:
-    Ornith-1.0 -> Hermes-3 -> DeepSeek -> Kimi.
+    Implements robust API Key rotation for all providers and a multi-model fallback chain:
+    Ornith-1.0 -> Hermes-3 -> OpenRouter -> Groq -> DeepSeek -> Kimi.
     """
     
     def __init__(self):
         self.base_url = os.getenv("ORNITH_BASE_URL", "http://localhost:8000/v1")
         self.model = os.getenv("ORNITH_MODEL", "Ornith-1.0")
         
-        # Key Rotation Setup (comma-separated keys)
-        raw_keys = os.getenv("ORNITH_API_KEY", "dummy-key-if-none")
-        self.api_keys = [k.strip() for k in raw_keys.split(",") if k.strip()]
-        self.current_key_idx = 0
-        
+        self.api_keys = self._parse_keys(os.getenv("ORNITH_API_KEY", "dummy-key-if-none"))
         self.enable_think_blocks = os.getenv("ORNITH_ENABLE_THINK_BLOCKS", "true").lower() == "true"
         
         # Fallback endpoints and keys
         self.omniroute_url = os.getenv("OMNIROUTE_BASE_URL", "http://localhost:20128/v1")
+        self.omniroute_keys = self._parse_keys(os.getenv("OMNIROUTE_API_KEY", ""))
         self.hermes_model = os.getenv("HERMES_MODEL", "Nous-Hermes-3")
-        self.deepseek_key = os.getenv("DEEPSEEK_API_KEY", "")
-        self.kimi_key = os.getenv("KIMI_API_KEY", "")
+        
+        self.openrouter_keys = self._parse_keys(os.getenv("OPENROUTER_API_KEY", ""))
+        self.openrouter_model = os.getenv("OPENROUTER_MODEL", "anthropic/claude-3.5-sonnet")
+        
+        self.groq_keys = self._parse_keys(os.getenv("GROQ_API_KEY", ""))
+        self.groq_model = os.getenv("GROQ_MODEL", "llama3-70b-8192")
+        
+        self.deepseek_keys = self._parse_keys(os.getenv("DEEPSEEK_API_KEY", ""))
+        self.kimi_keys = self._parse_keys(os.getenv("KIMI_API_KEY", ""))
 
         self._client = httpx.AsyncClient(timeout=30.0)
-        logger.info(f"Initialized OrnithClient for model {self.model} at {self.base_url} with {len(self.api_keys)} keys.")
+        logger.info(f"Initialized OrnithClient with multi-provider failover and key rotation.")
 
-    def _get_current_key(self) -> str:
-        if not self.api_keys:
-            return ""
-        return self.api_keys[self.current_key_idx]
-
-    def _rotate_key(self):
-        if self.api_keys:
-            self.current_key_idx = (self.current_key_idx + 1) % len(self.api_keys)
-            logger.info(f"Rotated Ornith API key. Now using index {self.current_key_idx}")
+    def _parse_keys(self, raw: str) -> List[str]:
+        return [k.strip() for k in raw.split(",") if k.strip()]
 
     def _build_payload(self, prompt: str, model_name: str) -> dict:
         system_prompt = (
@@ -68,54 +65,62 @@ class OrnithClient:
         content = data["choices"][0]["message"]["content"]
         return self._parse_mcp_scaffold(content)
 
-    async def generate_plan(self, prompt: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
-        """
-        Generates a plan-only MCP scaffold using a robust multi-model failover chain.
-        """
-        # --- 1. Ornith-1.0 (Primary) with Key Rotation ---
-        for _ in range(max(1, len(self.api_keys))):
-            current_key = self._get_current_key()
-            payload = self._build_payload(prompt, self.model)
+    async def _try_provider(self, provider_name: str, url: str, keys: List[str], payload: dict) -> Optional[Dict[str, Any]]:
+        """Attempts to execute request across all available keys for a provider (Key Rotation)."""
+        if not keys:
+            # Try once without key (for local endpoints like OmniRoute that might not need auth)
+            keys = [""]
+            
+        for idx, key in enumerate(keys):
             try:
-                return await self._make_request(self.base_url, current_key, payload)
+                return await self._make_request(url, key, payload)
             except httpx.RequestError as e:
-                logger.warning(f"Ornith HTTP Request Error with key idx {self.current_key_idx}: {e}")
-                self._rotate_key()
+                logger.warning(f"[{provider_name}] HTTP Request Error with key idx {idx}: {e}")
             except httpx.HTTPStatusError as e:
-                logger.warning(f"Ornith HTTP Status Error {e.response.status_code} with key idx {self.current_key_idx}")
-                if e.response.status_code in [401, 429]:
-                    self._rotate_key()
-                else:
-                    break
+                logger.warning(f"[{provider_name}] HTTP Status {e.response.status_code} with key idx {idx}")
+                # 401/429 means we should try the next key, otherwise the model might be failing for other reasons but we still rotate to be safe
+        return None
+
+    async def generate_plan(self, prompt: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
+        """Generates a plan-only MCP scaffold using a robust multi-model failover chain."""
+        
+        # --- 1. Ornith-1.0 (Primary) ---
+        payload = self._build_payload(prompt, self.model)
+        result = await self._try_provider("Ornith", self.base_url, self.api_keys, payload)
+        if result: return result
 
         # --- 2. Hermes-3 via OmniRoute (Secondary) ---
         logger.info("Falling back to Hermes-3 via OmniRoute.")
-        try:
-            payload = self._build_payload(prompt, self.hermes_model)
-            omni_key = os.getenv("OMNIROUTE_API_KEY", "")
-            return await self._make_request(self.omniroute_url, omni_key, payload)
-        except Exception as e:
-            logger.warning(f"Hermes fallback failed: {e}")
+        payload = self._build_payload(prompt, self.hermes_model)
+        result = await self._try_provider("OmniRoute", self.omniroute_url, self.omniroute_keys, payload)
+        if result: return result
 
-        # --- 3. DeepSeek (Tertiary) ---
-        if self.deepseek_key:
-            logger.info("Falling back to DeepSeek.")
-            try:
-                payload = self._build_payload(prompt, "deepseek-chat")
-                return await self._make_request("https://api.deepseek.com/v1", self.deepseek_key, payload)
-            except Exception as e:
-                logger.warning(f"DeepSeek fallback failed: {e}")
+        # --- 3. OpenRouter (Tertiary) ---
+        logger.info("Falling back to OpenRouter.")
+        payload = self._build_payload(prompt, self.openrouter_model)
+        # OpenRouter uses a different header structure optionally, but standard Bearer works too.
+        result = await self._try_provider("OpenRouter", "https://openrouter.ai/api/v1", self.openrouter_keys, payload)
+        if result: return result
 
-        # --- 4. Kimi (Quaternary) ---
-        if self.kimi_key:
-            logger.info("Falling back to Kimi.")
-            try:
-                payload = self._build_payload(prompt, "moonshot-v1-8k")
-                return await self._make_request("https://api.moonshot.cn/v1", self.kimi_key, payload)
-            except Exception as e:
-                logger.warning(f"Kimi fallback failed: {e}")
+        # --- 4. Groq (Quaternary) ---
+        logger.info("Falling back to Groq.")
+        payload = self._build_payload(prompt, self.groq_model)
+        result = await self._try_provider("Groq", "https://api.groq.com/openai/v1", self.groq_keys, payload)
+        if result: return result
 
-        # --- 5. Ultimate Fallback Scaffold ---
+        # --- 5. DeepSeek (Quinary) ---
+        logger.info("Falling back to DeepSeek.")
+        payload = self._build_payload(prompt, "deepseek-chat")
+        result = await self._try_provider("DeepSeek", "https://api.deepseek.com/v1", self.deepseek_keys, payload)
+        if result: return result
+
+        # --- 6. Kimi (Senary) ---
+        logger.info("Falling back to Kimi (kimi-k3).")
+        payload = self._build_payload(prompt, "kimi-k3")
+        result = await self._try_provider("Kimi", "https://api.moonshot.cn/v1", self.kimi_keys, payload)
+        if result: return result
+
+        # --- 7. Ultimate Fallback Scaffold ---
         logger.error("All AI models and fallbacks failed. Returning default manual review scaffold.")
         return self._generate_fallback_plan(prompt)
 
