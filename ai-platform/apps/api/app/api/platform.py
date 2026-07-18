@@ -35,12 +35,12 @@ def service_dep(session: Session = Depends(session_dep)) -> PlatformService:
 
 
 @router.get("/dashboard")
-async def dashboard(auth: AuthContext = Depends(require_workspace_context), service: PlatformService = Depends(service_dep)):
+def dashboard(auth: AuthContext = Depends(require_workspace_context), service: PlatformService = Depends(service_dep)):
     return service.dashboard(auth)
 
 
 @router.post("/campaigns")
-async def create_campaign(payload: CampaignCreate, auth: AuthContext = Depends(require_roles("owner", "admin", "editor")), service: PlatformService = Depends(service_dep)):
+def create_campaign(payload: CampaignCreate, auth: AuthContext = Depends(require_roles("owner", "admin", "editor")), service: PlatformService = Depends(service_dep)):
     try:
         campaign = service.create_campaign(auth, payload)
         return {"id": campaign.id, "name": campaign.name, "status": campaign.status}
@@ -50,7 +50,7 @@ async def create_campaign(payload: CampaignCreate, auth: AuthContext = Depends(r
 
 
 @router.get("/campaigns")
-async def list_campaigns(auth: AuthContext = Depends(require_workspace_context), service: PlatformService = Depends(service_dep)):
+def list_campaigns(auth: AuthContext = Depends(require_workspace_context), service: PlatformService = Depends(service_dep)):
     return [
         {
             "id": item.id,
@@ -67,13 +67,13 @@ async def list_campaigns(auth: AuthContext = Depends(require_workspace_context),
 
 
 @router.post("/media/jobs")
-async def create_media_job(payload: MediaJobCreate, auth: AuthContext = Depends(require_roles("owner", "admin", "editor")), service: PlatformService = Depends(service_dep)):
+def create_media_job(payload: MediaJobCreate, auth: AuthContext = Depends(require_roles("owner", "admin", "editor")), service: PlatformService = Depends(service_dep)):
     job = service.create_media_job(auth, payload)
     return {"id": job.id, "status": job.status}
 
 
 @router.get("/media/jobs")
-async def list_media_jobs(auth: AuthContext = Depends(require_workspace_context), service: PlatformService = Depends(service_dep)):
+def list_media_jobs(auth: AuthContext = Depends(require_workspace_context), service: PlatformService = Depends(service_dep)):
     return [
         {
             "id": item.id,
@@ -89,12 +89,12 @@ async def list_media_jobs(auth: AuthContext = Depends(require_workspace_context)
 
 
 @router.get("/approvals")
-async def list_approvals(auth: AuthContext = Depends(require_workspace_context), service: PlatformService = Depends(service_dep)):
+def list_approvals(auth: AuthContext = Depends(require_workspace_context), service: PlatformService = Depends(service_dep)):
     return [{"id": item.id, "kind": item.kind, "title": item.title, "status": item.status} for item in service.list_approvals(auth)]
 
 
 @router.post("/approvals/{approval_id}")
-async def decide_approval(approval_id: str, payload: ApprovalDecision, auth: AuthContext = Depends(require_roles("owner", "admin")), service: PlatformService = Depends(service_dep)):
+def decide_approval(approval_id: str, payload: ApprovalDecision, auth: AuthContext = Depends(require_roles("owner", "admin")), service: PlatformService = Depends(service_dep)):
     item = service.update_approval(auth, approval_id, payload.status, payload.note)
     if not item:
         raise HTTPException(status_code=404, detail="Approval item not found")
@@ -102,22 +102,22 @@ async def decide_approval(approval_id: str, payload: ApprovalDecision, auth: Aut
 
 
 @router.post("/webhooks")
-async def create_webhook(payload: WebhookCreate, auth: AuthContext = Depends(require_roles("owner", "admin")), service: PlatformService = Depends(service_dep)):
+def create_webhook(payload: WebhookCreate, auth: AuthContext = Depends(require_roles("owner", "admin")), service: PlatformService = Depends(service_dep)):
     webhook = service.create_webhook(auth, payload)
     return {"id": webhook.id, "status": webhook.status}
 
 
 @router.get("/webhooks")
-async def list_webhooks(auth: AuthContext = Depends(require_workspace_context), service: PlatformService = Depends(service_dep)):
+def list_webhooks(auth: AuthContext = Depends(require_workspace_context), service: PlatformService = Depends(service_dep)):
     return [{"id": item.id, "name": item.name, "status": item.status, "description": item.description} for item in service.list_webhooks(auth)]
 
 
 @router.post("/autonomous_ops")
-async def create_autonomous_op(payload: AutonomousOpCreate, auth: AuthContext = Depends(require_roles("owner", "admin")), service: PlatformService = Depends(service_dep)):
+def create_autonomous_op(payload: AutonomousOpCreate, auth: AuthContext = Depends(require_roles("owner", "admin")), service: PlatformService = Depends(service_dep)):
     op = service.create_autonomous_op(auth, payload)
     return {"id": op.id, "status": op.status}
 
 
 @router.get("/autonomous_ops")
-async def list_autonomous_ops(auth: AuthContext = Depends(require_workspace_context), service: PlatformService = Depends(service_dep)):
+def list_autonomous_ops(auth: AuthContext = Depends(require_workspace_context), service: PlatformService = Depends(service_dep)):
     return [{"id": item.id, "name": item.name, "status": item.status, "description": item.description} for item in service.list_autonomous_ops(auth)]
