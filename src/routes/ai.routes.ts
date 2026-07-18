@@ -66,19 +66,26 @@ export async function aiRoutes(app: FastifyInstance) {
 
       const response = await fetch(`${AI_API_URL}${path}`, fetchOptions);
       
+      let statusToReturn = response.status;
+      // If the upstream AI service returns 401 because our internal HMAC signatures mismatch,
+      // return 502 to the frontend instead of 401 so the frontend doesn't log the user out.
+      if (statusToReturn === 401) {
+        statusToReturn = 502;
+      }
+
       const contentType = response.headers.get("content-type");
       if (contentType && contentType.includes("application/json")) {
         const data = await response.json();
         if (!response.ok) {
           req.log.error(`AI API Error (${response.status}): ${JSON.stringify(data)}`);
         }
-        return reply.status(response.status).send(data);
+        return reply.status(statusToReturn).send(data);
       } else {
         const text = await response.text();
         if (!response.ok) {
           req.log.error(`AI API Error (${response.status}): ${text}`);
         }
-        return reply.status(response.status).send(text);
+        return reply.status(statusToReturn).send(text);
       }
     } catch (error) {
       req.log.error(error);
