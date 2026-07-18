@@ -41,6 +41,9 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_production_security(self) -> "Settings":
+        if self.database_url and self.database_url.startswith("postgresql://"):
+            self.database_url = self.database_url.replace("postgresql://", "postgresql+psycopg://", 1)
+            
         if self.app_env.lower() == "production":
             missing = []
             if not self.api_auth_secret:
