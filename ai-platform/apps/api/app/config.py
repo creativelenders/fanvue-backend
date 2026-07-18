@@ -8,7 +8,7 @@ class Settings(BaseSettings):
 
     app_env: str = "development"
     database_url: str = "sqlite:///./fanvue_promotion.db"
-    api_auth_secret: str | None = None
+    api_auth_secret: str | None = "fanvue_super_secret_auth_key_123"
     auth_max_age_seconds: int = Field(default=300, ge=30, le=3600)
     allow_unsafe_dev_headers: bool = False
     agent_execution_enabled: bool = False
