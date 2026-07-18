@@ -27,6 +27,12 @@ def create_app() -> FastAPI:
     app.include_router(fanvue_webhooks)
     app.include_router(platform_router)
 
+    from fastapi.responses import PlainTextResponse
+    import traceback
+    @app.exception_handler(Exception)
+    async def global_exception_handler(request, exc):
+        return PlainTextResponse(str(exc) + "\n" + traceback.format_exc(), status_code=500)
+
     registry = SparkSkillRegistry("./skills")
     scheduler = AsyncScheduler()
     loop_engine = OpenModelLoopEngine(workspace=".")
