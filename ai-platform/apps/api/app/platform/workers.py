@@ -37,18 +37,40 @@ async def process_draft_campaigns():
     settings = get_settings()
     session_factory = get_session_factory(settings.database_url)
     
-    # Run in a threadpool since SQLAlchemy is synchronous
-    def _sync_work():
+    def _fetch_drafts():
         with session_factory() as session:
-            drafts = session.query(Campaign).filter(Campaign.status == "draft").all()
-            if drafts:
-                for c in drafts:
-                    c.status = "active"
-                    c.updated_at = datetime.now(timezone.utc)
-                session.commit()
-                logger.info(f"Processed {len(drafts)} draft campaigns to active.")
-                
-    await asyncio.to_thread(_sync_work)
+            return session.query(Campaign).filter(Campaign.status == "draft").all()
+            
+    drafts = await asyncio.to_thread(_fetch_drafts)
+    if not drafts:
+        return
+        
+    from app.agent.llm import llm_gateway
+    
+    for c in drafts:
+        try:
+            prompt = f"Create a promotional plan for campaign '{c.name}'. Objective: {c.objective}. Audience: {c.audience}. Offer: {c.offer}."
+            system_prompt = "You are a growth marketing expert. Return ONLY a JSON array of strings representing the recommended marketing channels and content types for this campaign. Example: [\"Twitter Thread\", \"Fanvue PPV Teaser\", \"Instagram Reel\"]."
+            
+            raw_json = await llm_gateway.generate_response(
+                prompt=prompt, 
+                system_prompt=system_prompt, 
+                response_format="json"
+            )
+            
+            def _update_campaign(c_id, plan_json):
+                with session_factory() as session:
+                    db_c = session.get(Campaign, c_id)
+                    if db_c:
+                        db_c.status = "active"
+                        db_c.channels_json = plan_json
+                        db_c.updated_at = datetime.now(timezone.utc)
+                        session.commit()
+                        
+            await asyncio.to_thread(_update_campaign, c.id, raw_json)
+            logger.info(f"Campaign {c.id} generated plan and activated.")
+        except Exception as e:
+            logger.error(f"Failed to process campaign {c.id}: {e}")
 
 
 async def process_queued_media_jobs():
