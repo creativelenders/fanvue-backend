@@ -17,7 +17,12 @@ router = APIRouter(prefix="/platform", tags=["platform"])
 
 
 def session_dep(settings: Settings = Depends(get_settings)) -> Generator[Session, None, None]:
-    session_factory = get_session_factory(settings.database_url)
+    try:
+        session_factory = get_session_factory(settings.database_url)
+    except Exception as e:
+        import traceback
+        raise HTTPException(status_code=400, detail=f"DB Init Error: {repr(e)}\n{traceback.format_exc()}")
+        
     session = session_factory()
     try:
         yield session
@@ -36,8 +41,12 @@ async def dashboard(auth: AuthContext = Depends(require_workspace_context), serv
 
 @router.post("/campaigns")
 async def create_campaign(payload: CampaignCreate, auth: AuthContext = Depends(require_roles("owner", "admin", "editor")), service: PlatformService = Depends(service_dep)):
-    campaign = service.create_campaign(auth, payload)
-    return {"id": campaign.id, "name": campaign.name, "status": campaign.status}
+    try:
+        campaign = service.create_campaign(auth, payload)
+        return {"id": campaign.id, "name": campaign.name, "status": campaign.status}
+    except Exception as e:
+        import traceback
+        raise HTTPException(status_code=400, detail=f"Error: {repr(e)}\n{traceback.format_exc()}")
 
 
 @router.get("/campaigns")
