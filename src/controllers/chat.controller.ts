@@ -6,7 +6,7 @@ import { aiService } from "../services/ai.service";
 
 export class ChatController {
   async getThreads(request: FastifyRequest, reply: FastifyReply) {
-    const workspaceId = (request as any).workspaceId;
+    const workspaceId = request.user?.workspaceId || "3af39644-6d79-4384-842d-3f141bd63919";
     
     // Auto-create a demo thread if none exist so the UI isn't empty
     let threads = await db.select({
