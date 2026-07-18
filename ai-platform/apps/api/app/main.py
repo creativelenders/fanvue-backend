@@ -25,6 +25,30 @@ def create_app() -> FastAPI:
     scheduler = AsyncScheduler()
     loop_engine = OpenModelLoopEngine(workspace=".")
 
+    from contextlib import asynccontextmanager
+    import asyncio
+    from app.platform.workers import process_draft_campaigns, process_queued_media_jobs
+
+    @asynccontextmanager
+    async def lifespan(app_inst: FastAPI):
+        # Register workers
+        scheduler.every("process_campaigns", 5, process_draft_campaigns)
+        scheduler.every("process_media", 5, process_queued_media_jobs)
+        
+        # Start scheduler loop in background
+        scheduler_task = asyncio.create_task(scheduler.serve_forever(poll_seconds=5))
+        
+        yield
+        
+        # Shutdown
+        scheduler.stop()
+        try:
+            await asyncio.wait_for(scheduler_task, timeout=5.0)
+        except asyncio.TimeoutError:
+            pass
+
+    app.router.lifespan_context = lifespan
+
     app.state.settings = settings
     app.state.skill_registry = registry
     app.state.scheduler = scheduler
