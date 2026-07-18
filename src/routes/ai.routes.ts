@@ -69,9 +69,15 @@ export async function aiRoutes(app: FastifyInstance) {
       const contentType = response.headers.get("content-type");
       if (contentType && contentType.includes("application/json")) {
         const data = await response.json();
+        if (!response.ok) {
+          req.log.error(`AI API Error (${response.status}): ${JSON.stringify(data)}`);
+        }
         return reply.status(response.status).send(data);
       } else {
         const text = await response.text();
+        if (!response.ok) {
+          req.log.error(`AI API Error (${response.status}): ${text}`);
+        }
         return reply.status(response.status).send(text);
       }
     } catch (error) {
