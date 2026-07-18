@@ -34,6 +34,7 @@ export class MediaController {
     const uploadPath = path.join(process.cwd(), "public", "uploads", filename);
     const fileUrl = `/uploads/${filename}`;
 
+    fs.mkdirSync(path.dirname(uploadPath), { recursive: true });
     await pump(data.file, fs.createWriteStream(uploadPath));
 
     let fileType = "document";
