@@ -3,7 +3,7 @@ import crypto from "crypto";
 import { authMiddleware } from "../middleware/auth.middleware";
 import { db } from "../db/client";
 
-const AI_API_URL = process.env.AI_API_URL || "http://localhost:8000";
+const AI_API_URL = process.env.AI_API_URL || process.env.API_BASE_URL || "http://localhost:8000";
 const AI_AUTH_SECRET = process.env.AI_AUTH_SECRET || "fanvue_super_secret_auth_key_123";
 
 function generateAuthHeaders(method: string, path: string, workspaceId: string, userId: string, role: string) {
