@@ -15,12 +15,6 @@ from app.skills.registry import SparkSkillRegistry
 def create_app() -> FastAPI:
     settings = get_settings()
     app = FastAPI(title="Fanvue Promotion OS Backend", version="0.1.0", debug=True)
-    allowed_hosts = [host.strip().strip('"').strip("'") for host in settings.allowed_hosts.split(",") if host.strip()]
-    if allowed_hosts and "*" not in allowed_hosts:
-        try:
-            app.add_middleware(TrustedHostMiddleware, allowed_hosts=allowed_hosts)
-        except AssertionError:
-            pass # Ignore invalid wildcard patterns from environment variables
     allowed_origins = [origin.strip().strip('"').strip("'") for origin in settings.allowed_origins.split(",") if origin.strip()]
     if allowed_origins:
         app.add_middleware(CORSMiddleware, allow_origins=allowed_origins, allow_methods=["GET", "POST"], allow_headers=["content-type", "x-fanvue-signature", "x-fanvue-event-id"], allow_credentials=False)
