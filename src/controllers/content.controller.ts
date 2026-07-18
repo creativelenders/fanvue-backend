@@ -6,7 +6,7 @@ import { aiService } from "../services/ai.service";
 
 export class ContentController {
   async listGenerations(request: FastifyRequest, reply: FastifyReply) {
-    const workspaceId = request.user?.workspaceId || "3af39644-6d79-4384-842d-3f141bd63919";
+    const workspaceId = (request.user as any)?.workspaceId || "3af39644-6d79-4384-842d-3f141bd63919";
     const generations = await db.select()
       .from(contentGenerations)
       .where(eq(contentGenerations.workspaceId, workspaceId))
@@ -17,7 +17,7 @@ export class ContentController {
   }
 
   async generate(request: FastifyRequest, reply: FastifyReply) {
-    const workspaceId = request.user?.workspaceId || "3af39644-6d79-4384-842d-3f141bd63919";
+    const workspaceId = (request.user as any)?.workspaceId || "3af39644-6d79-4384-842d-3f141bd63919";
     const userId = request.user!.sub;
     const { prompt, type } = request.body as any;
 
@@ -52,7 +52,7 @@ export class ContentController {
   }
 
   async trainPersona(request: FastifyRequest, reply: FastifyReply) {
-    const workspaceId = request.user?.workspaceId || "3af39644-6d79-4384-842d-3f141bd63919";
+    const workspaceId = (request.user as any)?.workspaceId || "3af39644-6d79-4384-842d-3f141bd63919";
     const userId = request.user!.sub;
     const { description } = request.body as any;
 
@@ -68,7 +68,7 @@ export class ContentController {
   }
 
   async listPersonas(request: FastifyRequest, reply: FastifyReply) {
-    const workspaceId = request.user?.workspaceId || "3af39644-6d79-4384-842d-3f141bd63919";
+    const workspaceId = (request.user as any)?.workspaceId || "3af39644-6d79-4384-842d-3f141bd63919";
     const personas = await db.select()
       .from(contentStrategies)
       .where(eq(contentStrategies.workspaceId, workspaceId))
