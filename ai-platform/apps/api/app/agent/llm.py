@@ -112,13 +112,33 @@ async def generate_response(
     except Exception as exc:
         print("EXCEPTION IN LLM GATEWAY:", type(exc).__name__, exc)
         if hasattr(exc, "response") and hasattr(exc.response, "text"):
-            print("DEEPSEEK ERROR BODY:", exc.response.text)
-        import traceback
-        traceback.print_exc()
-        fallback = {"ok": False, "fallback": "omniroute_downgrade", "error_type": type(exc).__name__}
-        return json.dumps(fallback) if response_format == "json" else "I’m having trouble generating that right now. Want a shorter check-in or a teaser idea instead?"
-        fallback = {"ok": False, "fallback": "omniroute_downgrade", "error_type": type(exc).__name__}
-        return json.dumps(fallback) if response_format == "json" else "I’m having trouble generating that right now. Want a shorter check-in or a teaser idea instead?"
+            print("ERROR BODY:", exc.response.text)
+            
+        # Fallback to DeepSeek if configured
+        deepseek_key = os.getenv("DEEPSEEK_API_KEY")
+        if deepseek_key:
+            print("Attempting DeepSeek fallback...")
+            try:
+                payload["model"] = "deepseek-chat"
+                if "response_format" in payload:
+                    # DeepSeek requires response_format to be an object, which it already is
+                    pass
+                async with httpx.AsyncClient(timeout=timeout) as client:
+                    ds_response = await client.post(
+                        "https://api.deepseek.com/chat/completions", 
+                        headers={"Authorization": f"Bearer {deepseek_key}", "Content-Type": "application/json"}, 
+                        json=payload
+                    )
+                    ds_response.raise_for_status()
+                    data = ds_response.json()
+                    content = data["choices"][0]["message"]["content"]
+            except Exception as ds_exc:
+                print("DEEPSEEK FALLBACK FAILED:", type(ds_exc).__name__, ds_exc)
+                fallback = {"ok": False, "fallback": "omniroute_downgrade", "error_type": type(exc).__name__}
+                return json.dumps(fallback) if response_format == "json" else "I’m having trouble generating that right now."
+        else:
+            fallback = {"ok": False, "fallback": "omniroute_downgrade", "error_type": type(exc).__name__}
+            return json.dumps(fallback) if response_format == "json" else "I’m having trouble generating that right now."
 
     if response_format == "json":
         filtered_json = engine.redact_leaks(str(content))
