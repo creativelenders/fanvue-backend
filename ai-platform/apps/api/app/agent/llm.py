@@ -110,34 +110,61 @@ async def generate_response(
             data = response.json()
             content = data["choices"][0]["message"]["content"]
     except Exception as exc:
-        print("EXCEPTION IN LLM GATEWAY:", type(exc).__name__, exc)
+        print("EXCEPTION IN PRIMARY LLM GATEWAY:", type(exc).__name__, exc)
         if hasattr(exc, "response") and hasattr(exc.response, "text"):
             print("ERROR BODY:", exc.response.text)
             
-        # Fallback to DeepSeek if configured
-        deepseek_key = os.getenv("DEEPSEEK_API_KEY")
-        if deepseek_key:
-            print("Attempting DeepSeek fallback...")
+        # Robust Multi-Model Fallback Chain
+        fallbacks = [
+            {
+                "name": "Groq",
+                "key": os.getenv("GROQ_API_KEY"),
+                "url": "https://api.groq.com/openai/v1/chat/completions",
+                "model": os.getenv("GROQ_MODEL", "llama3-70b-8192")
+            },
+            {
+                "name": "OpenRouter",
+                "key": os.getenv("OPENROUTER_API_KEY"),
+                "url": "https://openrouter.ai/api/v1/chat/completions",
+                "model": os.getenv("OPENROUTER_MODEL", "anthropic/claude-3.5-sonnet")
+            },
+            {
+                "name": "DeepSeek",
+                "key": os.getenv("DEEPSEEK_API_KEY"),
+                "url": "https://api.deepseek.com/chat/completions",
+                "model": "deepseek-chat"
+            },
+            {
+                "name": "Kimi",
+                "key": os.getenv("KIMI_API_KEY"),
+                "url": "https://api.moonshot.cn/v1/chat/completions",
+                "model": "kimi-k3"
+            }
+        ]
+        
+        for fb in fallbacks:
+            if not fb["key"]:
+                continue
+                
+            print(f"Attempting {fb['name']} fallback...")
             try:
-                payload["model"] = "deepseek-chat"
-                if "response_format" in payload:
-                    # DeepSeek requires response_format to be an object, which it already is
-                    pass
+                payload["model"] = fb["model"]
                 async with httpx.AsyncClient(timeout=timeout) as client:
-                    ds_response = await client.post(
-                        "https://api.deepseek.com/chat/completions", 
-                        headers={"Authorization": f"Bearer {deepseek_key}", "Content-Type": "application/json"}, 
+                    fb_response = await client.post(
+                        fb["url"], 
+                        headers={"Authorization": f"Bearer {fb['key']}", "Content-Type": "application/json"}, 
                         json=payload
                     )
-                    ds_response.raise_for_status()
-                    data = ds_response.json()
+                    fb_response.raise_for_status()
+                    data = fb_response.json()
                     content = data["choices"][0]["message"]["content"]
-            except Exception as ds_exc:
-                print("DEEPSEEK FALLBACK FAILED:", type(ds_exc).__name__, ds_exc)
-                fallback = {"ok": False, "fallback": "omniroute_downgrade", "error_type": type(exc).__name__}
-                return json.dumps(fallback) if response_format == "json" else "I’m having trouble generating that right now."
+                    print(f"{fb['name']} fallback successful!")
+                    break  # Success! Exit fallback loop
+            except Exception as fb_exc:
+                print(f"{fb['name']} FALLBACK FAILED:", type(fb_exc).__name__, fb_exc)
         else:
-            fallback = {"ok": False, "fallback": "omniroute_downgrade", "error_type": type(exc).__name__}
+            # If the loop finishes without breaking, ALL fallbacks failed
+            fallback = {"ok": False, "fallback": "all_models_failed", "error_type": type(exc).__name__}
             return json.dumps(fallback) if response_format == "json" else "I’m having trouble generating that right now."
 
     if response_format == "json":
