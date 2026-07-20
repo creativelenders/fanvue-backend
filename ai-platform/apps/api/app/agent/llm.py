@@ -142,6 +142,10 @@ async def generate_response(
             }
         ]
         
+        # Remove strict response_format for fallback models to avoid 400 Bad Request on unsupported APIs
+        if "response_format" in payload:
+            del payload["response_format"]
+            
         for fb in fallbacks:
             if not fb["key"]:
                 continue
@@ -162,6 +166,8 @@ async def generate_response(
                     break  # Success! Exit fallback loop
             except Exception as fb_exc:
                 print(f"{fb['name']} FALLBACK FAILED:", type(fb_exc).__name__, fb_exc)
+                if hasattr(fb_exc, "response") and hasattr(fb_exc.response, "text"):
+                    print(f"{fb['name']} ERROR BODY:", fb_exc.response.text)
         else:
             # If the loop finishes without breaking, ALL fallbacks failed
             fallback = {"ok": False, "fallback": "all_models_failed", "error_type": type(exc).__name__}
